@@ -64,7 +64,9 @@
   <ItemGroup>
     <Compile Include="Assets\Code\DepthFirstMazeAlgorithm.cs" />
     <Compile Include="Assets\Code\IMazeAlgorithm.cs" />
-    <Compile Include="Assets\Code\Maze.cs" />
+    <Compile Include="Assets\Code\MazeAlgorithmResult.cs" />
+    <Compile Include="Assets\Code\MazeManager.cs" />
+    <Compile Include="Assets\Code\Player.cs" />
     <Reference Include="Unity.Timeline.Editor">
       <HintPath>D:/_Unity Projects/AMaze 3D/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>
     </Reference>

@@ -9,6 +9,6 @@ namespace Assets.Code
 {
     interface IMazeAlgorithm
     {
-        bool TryGetWallPositionsToDestroy(List<Vector3> allCellPositions, out List<Vector3> xWallPositionsToDestroy, out List<Vector3> yWallPositionsToDestroy);
+        MazeAlgorithmResult GenerateMaze(List<Vector3> allCellPositions);
     }
 }

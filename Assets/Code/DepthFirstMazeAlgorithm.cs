@@ -7,12 +7,15 @@ using UnityEngine;
 
 namespace Assets.Code
 {
+
     class DepthFirstMazeAlgorithm : IMazeAlgorithm
     {
-        public bool TryGetWallPositionsToDestroy(List<Vector3> allCellPositions, out List<Vector3> xWallPositionsToDestroy, out List<Vector3> yWallPositionsToDestroy)
+        public MazeAlgorithmResult GenerateMaze(List<Vector3> allCellPositions)
         {
-            xWallPositionsToDestroy = new List<Vector3>();
-            yWallPositionsToDestroy = new List<Vector3>();
+            MazeAlgorithmResult mazeAlgorithmResult = new MazeAlgorithmResult();
+
+            List<Vector3> xWallPositionsToDestroy = new List<Vector3>();
+            List<Vector3> yWallPositionsToDestroy = new List<Vector3>();
 
             // create a copy of all the cell positions to alter
             Stack<Vector3> visitedPositions = new Stack<Vector3>(); ;
@@ -37,10 +40,21 @@ namespace Assets.Code
             var startCellY = allCellPositions.Min(cellPos => cellPos.y);
             var startCellZ = allCellPositions.Min(cellPos => cellPos.z);
 
+            var endCellX = allCellPositions.Max(cellPos => cellPos.x);
+            var endCellY = allCellPositions.Max(cellPos => cellPos.y);
+            var endCellZ = allCellPositions.Max(cellPos => cellPos.z);
+
             // Set the start cell position to the bottom left (up for debate if this should be default starting cell)
             Vector3 startPosition = new Vector3(startCellX, startCellY, startCellZ);
+
+            // Keep track of the endPosition by using the latest 'neighbour' position
+            Vector3 endPosition = new Vector3(endCellX, endCellY, endCellZ);
+
             // Push it on the stack of visited positions
             visitedPositions.Push(startPosition);
+            // Set it to the result we're going to return
+            mazeAlgorithmResult.StartPosition = new Vector3(startPosition.x, startPosition.y, startPosition.z);
+            mazeAlgorithmResult.EndPosition = new Vector3(endPosition.x, endPosition.y, endPosition.z);
 
             int visitedCells = 1; // we've 'visited' the start cell
             int totalAmountOfCells = allCellPositions.Count;
@@ -59,25 +73,36 @@ namespace Assets.Code
                     if (currentPosition.x != randomNeighbourPosition.x)
                     {
                         // we've moved along the x-axis, so we want to destroy the y-wall (with rotation 90), add it to the list
-                        if (currentPosition.x > randomNeighbourPosition.x) // we've moved to the left
+                        if (currentPosition.x > randomNeighbourPosition.x)
+                        {
+                            // we've moved to the left, destroy the y-wall with the current coordinates
                             yWallPositionsToDestroy.Add(currentPosition);
+                        }
                         else
-                            yWallPositionsToDestroy.Add(randomNeighbourPosition);
+                        {
+                            // we've moved to the right, destroy the y-wall with the neighbours coordinates
+                            yWallPositionsToDestroy.Add(randomNeighbourPosition); 
+                        }
                     }
                     else
                     {
                         // we've moved along the y-axis, so we want to destroy the x-wall (with rotation 0), add it to the list
-                        if (currentPosition.y > randomNeighbourPosition.y) // we've moved down
+                        if (currentPosition.y > randomNeighbourPosition.y)
+                        {
+                            // we've moved down, destroy the x-wall with the current coordinates
                             xWallPositionsToDestroy.Add(currentPosition);
+                        }
                         else
+                        {
+                            // we've moved up, destroy the x-wall with the neighbours coordinates
                             xWallPositionsToDestroy.Add(randomNeighbourPosition);
+                        }
                     }
 
                     // push the random neighbour on top of the stack, effectively making it the current position
                     visitedPositions.Push(randomNeighbourPosition);
                     // Since we've added it to the visitedPositions stack, REMOVE the random neighbour (new current position) from the unvisited positions
                     unvisitedCellPositions.Remove(randomNeighbourPosition);
-
 
                     // increment the amount of visited cells for the while loop to keep track off
                     visitedCells++;
@@ -92,18 +117,12 @@ namespace Assets.Code
 
             }
 
+            // We've finished creating the maze, let's fill the result and return it
+            mazeAlgorithmResult.XWallPositionsToDestroy = xWallPositionsToDestroy;
+            mazeAlgorithmResult.YWallPositionsToDestroy = yWallPositionsToDestroy;
 
-            // the amount of cells 
 
-            // AllWalls is the list of.. (obviously) all the walls in the maze.
-
-            // we don't want to touch the outer walls, unless we are creating an exit perhaps?
-            // this means, all wall with the lowest x, lowest y, highest x, highest y
-
-            // let's use the wall with the lowest x and lowest y as our starting wall.
-
-            // return true or false based on the amount of walls to destroy
-            return xWallPositionsToDestroy.Any() || yWallPositionsToDestroy.Any();
+            return mazeAlgorithmResult;
         }
 
         bool TryGetRandomNeighbour(Vector3 currentPosition, List<Vector3> unvisitedCellPositions, out Vector3 randomNeighbourPosition)
