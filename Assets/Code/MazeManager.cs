@@ -3,9 +3,15 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class MazeManager : MonoBehaviour // rename to MazeManager
 {
+    // Objects for the UI
+    private Slider _sldRowCount;
+    private Text _lblRowCountValue;
+    private int _selectedRowCount;
+
     // Objects for the maze
     public GameObject Wall;
     public Rigidbody Player;
@@ -24,30 +30,38 @@ public class MazeManager : MonoBehaviour // rename to MazeManager
     // Start is called before the first frame update
     void Start()
     {
-        var mazeSize = this.CalculateMazeSize();
-        this._xSize = mazeSize.Key;
-        this._ySize = mazeSize.Value;
-
-        this._allWalls = this.CreateAllWalls();
-        List<Vector3> allCellPositions = this.GetAllCellPositions(this._allWalls);
-        
-        // use a selected algorithm to destroy the walls to make the maze
-        IMazeAlgorithm mazeAlgorithm = new DepthFirstMazeAlgorithm();
-        this.GenerateMaze(mazeAlgorithm, allCellPositions);
+        this._sldRowCount = GameObject.Find("sldRowCount").GetComponent<Slider>();
+        this._lblRowCountValue = GameObject.Find("lblRowCountValue").GetComponent<Text>();
     }
 
     // Update is called once per frame
     void Update()
     {
+        this._selectedRowCount = (int)this._sldRowCount.value;
+        this._lblRowCountValue.text = this._selectedRowCount.ToString();
     }
 
+    public void GenerateMaze()
+    {
+
+        var mazeSize = this.CalculateMazeSize(this._selectedRowCount);
+        this._xSize = mazeSize.Key;
+        this._ySize = mazeSize.Value;
+
+        this._allWalls = this.CreateAllWalls();
+        List<Vector3> allCellPositions = this.GetAllCellPositions(this._allWalls);
+
+        // use a selected algorithm to destroy the walls to make the maze
+        IMazeAlgorithm mazeAlgorithm = new DepthFirstMazeAlgorithm();
+        this.CreateMaze(mazeAlgorithm, allCellPositions);
+    }
 
     // Maze.cs functions
-    KeyValuePair<int, int> CalculateMazeSize()
+    KeyValuePair<int, int> CalculateMazeSize(int rows)
     {
         // First let's get the size of the maze. y-size (vertical) is the ortographicSize of the camera * 2 (since the camera is centered)
         // let's take 1 unit as margin around the maze
-        Camera.main.orthographicSize = 5;
+        Camera.main.orthographicSize = rows/2;
         int ySize = (int)(Camera.main.orthographicSize - 1) * 2;
         
         // Let's calculate the width of the maze by getting the size of the game-screen,
@@ -96,6 +110,10 @@ public class MazeManager : MonoBehaviour // rename to MazeManager
             }
         }
 
+        // The walls are created, destroy the initial wall which we've used to clone all
+        // the other ones
+        //Destroy(Wall);
+
         return AllWalls;
     }
 
@@ -125,7 +143,7 @@ public class MazeManager : MonoBehaviour // rename to MazeManager
         return cellPositions;
     }
 
-    void GenerateMaze(IMazeAlgorithm mazeAlgorithmToUse, List<Vector3> allCellPositions)
+    void CreateMaze(IMazeAlgorithm mazeAlgorithmToUse, List<Vector3> allCellPositions)
     {
         MazeAlgorithmResult result = mazeAlgorithmToUse.GenerateMaze(allCellPositions);
 
@@ -162,10 +180,12 @@ public class MazeManager : MonoBehaviour // rename to MazeManager
 
             // The maze is created, let's add the player and the goal
             Vector3 playerStartPosition = new Vector3(result.StartPosition.x + WallWidth/2, result.StartPosition.y + WallWidth / 2);
-            Instantiate(Player, playerStartPosition, Quaternion.identity);
+            // Set the player to the position the mazeAlgorithm provided
+            Player.transform.position = playerStartPosition;
 
             Vector3 prizePosition = new Vector3(result.EndPosition.x + WallWidth / 2, result.EndPosition.y + WallWidth / 2);
-            Instantiate(Prize, prizePosition, Quaternion.identity);
+            // Set the prize to the position the mazeAlgorithm provided
+            Prize.transform.position = prizePosition;
         }
         else
         {
