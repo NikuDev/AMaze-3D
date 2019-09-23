@@ -8,6 +8,8 @@ using UnityEngine.UI;
 public class MazeManager : MonoBehaviour // rename to MazeManager
 {
     // Objects for the UI
+    public Canvas UICanvas;
+    public Canvas InGameUICanvas;
     private Slider _sldRowCount;
     private Text _lblRowCountValue;
     private int _selectedRowCount;
@@ -19,6 +21,7 @@ public class MazeManager : MonoBehaviour // rename to MazeManager
 
     private readonly float WallWidth = 1f;
 
+    private int _margin = 2;
     private int _xSize;
     private int _ySize;
 
@@ -32,6 +35,10 @@ public class MazeManager : MonoBehaviour // rename to MazeManager
     {
         this._sldRowCount = GameObject.Find("sldRowCount").GetComponent<Slider>();
         this._lblRowCountValue = GameObject.Find("lblRowCountValue").GetComponent<Text>();
+        //this._btnCancel = GameObject.Find("btnCancel").GetComponent<Button>();
+
+        this.UICanvas.enabled = true;
+        this.InGameUICanvas.enabled = false;
     }
 
     // Update is called once per frame
@@ -41,9 +48,25 @@ public class MazeManager : MonoBehaviour // rename to MazeManager
         this._lblRowCountValue.text = this._selectedRowCount.ToString();
     }
 
-    public void GenerateMaze()
+    public void StartGame()
     {
+        Debug.LogWarning("Starting Game");
+        this.UICanvas.enabled = false;
+        this.GenerateMaze();
+        this.InGameUICanvas.enabled = true;
+    }
 
+    public void CancelGame()
+    {
+        Debug.LogWarning("Cancelling Game");
+        this.InGameUICanvas.enabled = false;
+        this.DestroyMaze();
+        this.UICanvas.enabled = true;
+
+    }
+
+    void GenerateMaze()
+    {
         var mazeSize = this.CalculateMazeSize(this._selectedRowCount);
         this._xSize = mazeSize.Key;
         this._ySize = mazeSize.Value;
@@ -61,7 +84,7 @@ public class MazeManager : MonoBehaviour // rename to MazeManager
     {
         // First let's get the size of the maze. y-size (vertical) is the ortographicSize of the camera * 2 (since the camera is centered)
         // let's take 1 unit as margin around the maze
-        Camera.main.orthographicSize = rows/2;
+        Camera.main.orthographicSize = (rows + this._margin)/2;
         int ySize = (int)(Camera.main.orthographicSize - 1) * 2;
         
         // Let's calculate the width of the maze by getting the size of the game-screen,
@@ -192,5 +215,16 @@ public class MazeManager : MonoBehaviour // rename to MazeManager
             // something went terribly wrong
             Debug.LogError("Algorithm found no walls to destroy!");
         }
+    }
+
+    void DestroyMaze()
+    {
+        foreach (GameObject wall in this._allWalls)
+        {
+            Destroy(wall);
+        }
+
+        Player.transform.position = new Vector3(-9999, -9999, 0);
+        Prize.transform.position = new Vector3(-9999, 9999, 0);
     }
 }

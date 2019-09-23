@@ -8,6 +8,7 @@ public class Player : MonoBehaviour
     public Rigidbody Rb;
     public AudioClip PrizeSound;
     public AudioSource PrizeSoundSource;
+    public Rigidbody DummyObject;
 
     private Vector3 _movement;
 
@@ -37,11 +38,36 @@ public class Player : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        Debug.Log("We hit something! (" + collision.gameObject.name + ")");
         if (collision.gameObject.name.Contains("Prize"))
         {
             Debug.LogError("We've found the prize!");
             PrizeSoundSource.Play();
+            this.InitPrizeAnimation();
+        }
+    }
+    void InitPrizeAnimation()
+    {
+        int amount = 1000;
+        float screenWidth = Screen.width;
+        float screenHeight = Screen.height;
+
+        var center = 40 / 2;
+
+        for (int i = 0; i < amount; i++)
+        {
+            float randomXPos = Random.Range(-center, center);
+            float randomYPos = Random.Range(30, 80);
+
+            Vector3 startPos = new Vector3(randomXPos, randomYPos, 0);
+            DummyObject.drag = Random.Range(0.1f, 1);
+            DummyObject.mass = Random.Range(1, 100);
+
+            float randXScale = Random.Range(0.1f, 0.6f);
+            float randyScale = Random.Range(0.1f, 0.6f);
+            float randzScale = Random.Range(0.1f, 0.6f);
+
+            DummyObject.transform.localScale = new Vector3(randXScale, randyScale, randzScale);
+            Instantiate(DummyObject, startPos, new Quaternion(45, 20, 90, 0));
         }
     }
 }
