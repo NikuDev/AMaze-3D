@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,22 +11,32 @@ public class MazeManager : MonoBehaviour // rename to MazeManager
     // Objects for the UI
     public Canvas UICanvas;
     public Canvas InGameUICanvas;
-    private Slider _sldRowCount;
-    private Text _lblRowCountValue;
-    private int _selectedRowCount;
+    public TextMeshProUGUI LblRowCountValue;
+    public Dropdown CbAlgorithms;
+    private TextMeshPro _txtDifficultyEasy;
+    private TextMeshPro _txtDifficultyHard;
+
+    // Maze variables
+    private readonly float _wallWidth = 1f;
+    private int _selectedRowCount = 10;
+    private int _margin = 2;
+    public bool IsBGMEnabled = false;
 
     // Objects for the maze
     public GameObject Wall;
-    public Rigidbody Player;
-    public GameObject Prize;
 
-    private readonly float WallWidth = 1f;
+    public Player PlayerObject;
+    public GameObject PrizeObject;
 
-    private int _margin = 2;
-    private int _xSize;
-    private int _ySize;
+    public Rigidbody PrizeAnimationObject;
 
-    private Vector3 _startCellPosition;
+    public AudioClip PrizeSound;
+    public AudioSource PrizeSoundSource;
+    public AudioClip BGMSound;
+    public AudioSource BGMSoundSource;
+
+    private LTDescr _prizeAnimationId;
+
 
     // collection of walls to be passed to the algorithm of choice
     private List<GameObject> _allWalls;
@@ -33,45 +44,134 @@ public class MazeManager : MonoBehaviour // rename to MazeManager
     // Start is called before the first frame update
     void Start()
     {
-        this._sldRowCount = GameObject.Find("sldRowCount").GetComponent<Slider>();
-        this._lblRowCountValue = GameObject.Find("lblRowCountValue").GetComponent<Text>();
-        //this._btnCancel = GameObject.Find("btnCancel").GetComponent<Button>();
+        // get the difficulty texts to enable/disable when needed
+        this._txtDifficultyEasy = GameObject.Find("txtDifficultyEasy").GetComponent<TextMeshPro>();
+        this._txtDifficultyHard = GameObject.Find("txtDifficultyHard").GetComponent<TextMeshPro>();
+
+        // get all the IMazeAlgorithm's to populate in the combobox
+        this.InitialiseAlgorithmDropdown();
+
 
         this.UICanvas.enabled = true;
         this.InGameUICanvas.enabled = false;
+        PrizeSoundSource.clip = PrizeSound;
+
     }
 
-    // Update is called once per frame
-    void Update()
+    private void InitialiseAlgorithmDropdown()
     {
-        this._selectedRowCount = (int)this._sldRowCount.value;
-        this._lblRowCountValue.text = this._selectedRowCount.ToString();
+        // Clear all existing items in the dropdown
+        this.CbAlgorithms.ClearOptions();
+
+        List<string> availableAlgorithms = new List<string>();
+
+        // Get all classes that implement the IMazeAlgorithm interface
+        foreach (System.Type mazeAlgImplementation in System.Reflection.Assembly.GetExecutingAssembly().GetTypes()
+                .Where(ass => ass.GetInterfaces().Contains(typeof(IMazeAlgorithm))))
+        {
+            availableAlgorithms.Add(mazeAlgImplementation.Name);
+        }
+
+        // Add the name of the IMazeAlgorithm implementations to the drop down
+        this.CbAlgorithms.AddOptions(availableAlgorithms);
+    }
+
+    public void UpdateRowCount(Slider slider)
+    {
+        // Set the camera's field of view exactly to the slider's value
+        // This is to guarantee the maze fits in the view, and to create a smooth 
+        // effect in the UI
+        float fieldOfViewValue = (slider.value * 2) + this._margin;
+        Camera.main.fieldOfView = fieldOfViewValue;
+
+        // Since the maze works by multiplying by 2 from the centre point, we want to
+        // (subtly) change the row value to the nearest even number (i.e. 5 will be rounded down to 4)
+        // this will guarantee a centered maze on the screen, while keeping the smoothness when changing the camera's f.o.v.
+        this._selectedRowCount = (int)System.Math.Round(slider.value / 2) * 2;
+        this.LblRowCountValue.text = this._selectedRowCount.ToString();
+
     }
 
     public void StartGame()
     {
         Debug.LogWarning("Starting Game");
         this.UICanvas.enabled = false;
+        this._txtDifficultyEasy.gameObject.SetActive(false);
+        this._txtDifficultyHard.gameObject.SetActive(false);
         this.GenerateMaze();
+
         this.InGameUICanvas.enabled = true;
+
+        if (this.IsBGMEnabled)
+        {
+            BGMSoundSource.clip = BGMSound;
+            BGMSoundSource.volume = 0.3f;
+            BGMSoundSource.Play();
+        }
+    }
+
+    /// <summary>
+    /// Should get called when the Player object had a collision with the Prize object
+    /// </summary>
+    public void HandlePrizeFound()
+    {
+        PrizeSoundSource.Play();
+        this.InitPrizeAnimation();
+        this.CancelGame();
+    }
+
+    void InitPrizeAnimation()
+    {
+        int amount = 1000;
+        float screenWidth = Screen.width;
+        float screenHeight = Screen.height;
+
+        var center = 40 / 2;
+
+        for (int i = 0; i < amount; i++)
+        {
+            float randomXPos = Random.Range(-center, center);
+            float randomYPos = Random.Range(30, 80);
+
+            Vector3 startPos = new Vector3(randomXPos, randomYPos, 0);
+            PrizeAnimationObject.drag = Random.Range(0.1f, 1);
+            PrizeAnimationObject.mass = Random.Range(1, 100);
+
+            float randXScale = Random.Range(0.1f, 0.6f);
+            float randyScale = Random.Range(0.1f, 0.6f);
+            float randzScale = Random.Range(0.1f, 0.6f);
+
+            PrizeAnimationObject.transform.localScale = new Vector3(randXScale, randyScale, randzScale);
+            Instantiate(PrizeAnimationObject, startPos, new Quaternion(45, 20, 90, 0));
+        }        
     }
 
     public void CancelGame()
     {
         Debug.LogWarning("Cancelling Game");
         this.InGameUICanvas.enabled = false;
+        this._txtDifficultyEasy.gameObject.SetActive(true);
+        this._txtDifficultyHard.gameObject.SetActive(true);
         this.DestroyMaze();
         this.UICanvas.enabled = true;
 
     }
 
+    // Maze functions
     void GenerateMaze()
     {
-        var mazeSize = this.CalculateMazeSize(this._selectedRowCount);
-        this._xSize = mazeSize.Key;
-        this._ySize = mazeSize.Value;
+        // Let's start by determining the size of the maze
 
-        this._allWalls = this.CreateAllWalls();
+        // We'll use the value of the 'row count' slider to determine the height (y-size)
+        int ySize = this._selectedRowCount;
+        // .. and use the current screen ratio to determine the width (x-size)
+        float gameScreenRatio = ySize * (float)Screen.width / Screen.height;
+        // i.e. 1024 x 768 = 3/2 - if height = 5 , 5 x 0,66
+        int xSize = System.Convert.ToInt32(gameScreenRatio);
+        //int xSize = ySize * (Screen.width / Screen.height);
+
+        // Now that we've determined the size, let's create all the walls of the maze
+        this._allWalls = this.CreateAllWalls(xSize, ySize);
         List<Vector3> allCellPositions = this.GetAllCellPositions(this._allWalls);
 
         // use a selected algorithm to destroy the walls to make the maze
@@ -79,36 +179,20 @@ public class MazeManager : MonoBehaviour // rename to MazeManager
         this.CreateMaze(mazeAlgorithm, allCellPositions);
     }
 
-    // Maze.cs functions
-    KeyValuePair<int, int> CalculateMazeSize(int rows)
-    {
-        // First let's get the size of the maze. y-size (vertical) is the ortographicSize of the camera * 2 (since the camera is centered)
-        // let's take 1 unit as margin around the maze
-        Camera.main.orthographicSize = (rows + this._margin)/2;
-        int ySize = (int)(Camera.main.orthographicSize - 1) * 2;
-        
-        // Let's calculate the width of the maze by getting the size of the game-screen,
-        // this way when we change the resolution of the gamescreen, the size of the maze adjusts itself
-        float gameScreenRatio = ySize * (float)Screen.width / Screen.height;
-        // i.e. 1024 x 768 = 3/2 - if height = 5 , 5 x 0,66
-        int xSize = System.Convert.ToInt32(gameScreenRatio);
 
-        return new KeyValuePair<int, int>(xSize, ySize);
-    }
-
-    List<GameObject> CreateAllWalls()
+    List<GameObject> CreateAllWalls(int xSize, int ySize)
     {
         List<GameObject> AllWalls = new List<GameObject>();
 
         // X-walls - First we create all the walls needed on the x-axis
-        for (int x = 0; x < _xSize; x++) // x (i.e. 3) - process 0,1,2
+        for (int x = 0; x < xSize; x++) // x (i.e. 3) - process 0,1,2
         {
-            for (int y = 0; y <= _ySize; y++) // y (i.e. 3) - process 0,1,2,3
+            for (int y = 0; y <= ySize; y++) // y (i.e. 3) - process 0,1,2,3
             {
                 // instantiate wall along the x-axis
                 // | | | | |
                 //var xwallPos = new Vector3(x + WallWidth / 2, y, 0);
-                var xwallPos = new Vector3(x - _xSize / 2 + WallWidth / 2, y - _ySize / 2, 0);
+                var xwallPos = new Vector3(x - xSize / 2 + _wallWidth / 2, y - ySize / 2, 0);
                 // set name for debugging purposes
                 Wall.name = $"X-Wall X:{x} Y:{y}";
                 // render it and add it to the collection
@@ -117,15 +201,15 @@ public class MazeManager : MonoBehaviour // rename to MazeManager
         }
 
         // Y-walls
-        for (int x = 0; x <= _xSize; x++) // x (i.e. 3) - process 0,1,2,3
+        for (int x = 0; x <= xSize; x++) // x (i.e. 3) - process 0,1,2,3
         {
-            for (int y = 0; y < _ySize; y++) // y (i.e. 3) - process 0,1,2
+            for (int y = 0; y < ySize; y++) // y (i.e. 3) - process 0,1,2
             {
                 // instantiate wall along the y-axis
                 // create 1 less than the x-walls 
-                //  _ _ _ _!= _xSize)
+                //  _ _ _ _!= xSize)
                 //var ywallPos = new Vector3(x , y + WallWidth / 2);
-                var ywallPos = new Vector3(x - _xSize / 2, y - _ySize / 2 + WallWidth / 2);
+                var ywallPos = new Vector3(x - xSize / 2, y - ySize / 2 + _wallWidth / 2);
                 // set name for debugging purposes
                 Wall.name = $"Y-Wall X:{x} Y:{y}";
                 // render it, rotate it 90 degrees and add it to the collection
@@ -165,7 +249,7 @@ public class MazeManager : MonoBehaviour // rename to MazeManager
 
         return cellPositions;
     }
-
+    
     void CreateMaze(IMazeAlgorithm mazeAlgorithmToUse, List<Vector3> allCellPositions)
     {
         MazeAlgorithmResult result = mazeAlgorithmToUse.GenerateMaze(allCellPositions);
@@ -182,7 +266,7 @@ public class MazeManager : MonoBehaviour // rename to MazeManager
             foreach (var xWallPosition in xWallsToDestroy)
             {
                 // take off the (i.e. 0.5) offset used to center the wall
-                Vector3 positionWithoutOffset = new Vector3(xWallPosition.x + WallWidth / 2, xWallPosition.y, xWallPosition.z);
+                Vector3 positionWithoutOffset = new Vector3(xWallPosition.x + _wallWidth / 2, xWallPosition.y, xWallPosition.z);
                 // try to find the X-Wall GameObject based on the position the algorithm returned
                 var xWallToDestroy = xWalls.FirstOrDefault(wall => wall.transform.position.Equals(positionWithoutOffset));
                 // If it's there (as it should be), let's remove it from the scene
@@ -194,7 +278,7 @@ public class MazeManager : MonoBehaviour // rename to MazeManager
             foreach (var yWallPosition in yWallsToDestroy)
             {
                 // take off the (i.e. 0.5) offset used to center the wall
-                Vector3 positionWithoutOffset = new Vector3(yWallPosition.x, yWallPosition.y + WallWidth / 2, yWallPosition.z);
+                Vector3 positionWithoutOffset = new Vector3(yWallPosition.x, yWallPosition.y + _wallWidth / 2, yWallPosition.z);
                 // try to find the Y-Wall GameObject based on the position the algorithm returned
                 var yWallToDestroy = yWalls.FirstOrDefault(wall => wall.transform.position.Equals(positionWithoutOffset));
                 if (yWallToDestroy != null)
@@ -202,13 +286,15 @@ public class MazeManager : MonoBehaviour // rename to MazeManager
             }
 
             // The maze is created, let's add the player and the goal
-            Vector3 playerStartPosition = new Vector3(result.StartPosition.x + WallWidth/2, result.StartPosition.y + WallWidth / 2);
+            Vector3 playerStartPosition = new Vector3(result.StartPosition.x + _wallWidth/2, result.StartPosition.y + _wallWidth / 2);
             // Set the player to the position the mazeAlgorithm provided
-            Player.transform.position = playerStartPosition;
+            PlayerObject.transform.position = playerStartPosition;
+            // Add the Action to be triggered when the Player collides with the Prize
+            this.PlayerObject.OnPrizeFound = HandlePrizeFound;
 
-            Vector3 prizePosition = new Vector3(result.EndPosition.x + WallWidth / 2, result.EndPosition.y + WallWidth / 2);
+            Vector3 prizePosition = new Vector3(result.EndPosition.x + _wallWidth / 2, result.EndPosition.y + _wallWidth / 2);
             // Set the prize to the position the mazeAlgorithm provided
-            Prize.transform.position = prizePosition;
+            PrizeObject.transform.position = prizePosition;
         }
         else
         {
@@ -224,7 +310,7 @@ public class MazeManager : MonoBehaviour // rename to MazeManager
             Destroy(wall);
         }
 
-        Player.transform.position = new Vector3(-9999, -9999, 0);
-        Prize.transform.position = new Vector3(-9999, 9999, 0);
+        PlayerObject.transform.position = new Vector3(-9999, -9999, 0);
+        PrizeObject.transform.position = new Vector3(-9999, 9999, 0);
     }
 }
