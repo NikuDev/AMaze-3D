@@ -253,8 +253,8 @@ D:\_Unity Projects\AMaze 3D\Temp\bin\Debug\UnityEngine.VehiclesModule.xml
 D:\_Unity Projects\AMaze 3D\Temp\bin\Debug\UnityEngine.VideoModule.xml
 D:\_Unity Projects\AMaze 3D\Temp\bin\Debug\UnityEngine.WindModule.xml
 D:\_Unity Projects\AMaze 3D\Temp\bin\Debug\UnityEngine.XRModule.xml
-D:\_Unity Projects\AMaze 3D\obj\Debug\Assembly-CSharp.csprojAssemblyReference.cache
 D:\_Unity Projects\AMaze 3D\obj\Debug\Assembly-CSharp.csproj.CoreCompileInputs.cache
 D:\_Unity Projects\AMaze 3D\obj\Debug\Assembly-CSharp.csproj.CopyComplete
 D:\_Unity Projects\AMaze 3D\obj\Debug\Assembly-CSharp.dll
 D:\_Unity Projects\AMaze 3D\obj\Debug\Assembly-CSharp.pdb
+D:\_Unity Projects\AMaze 3D\obj\Debug\Assembly-CSharp.csprojAssemblyReference.cache

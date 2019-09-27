@@ -67,6 +67,7 @@
     <Compile Include="Assets\Code\MazeAlgorithms\MazeAlgorithmResult.cs" />
     <Compile Include="Assets\Code\MazeManager.cs" />
     <Compile Include="Assets\Code\Player.cs" />
+    <Compile Include="Assets\Code\Prize.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\Benchmark01.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\Benchmark01_UGUI.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\Benchmark02.cs" />
